@@ -1,0 +1,34 @@
+name: Build and Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package artifact
+        run: |
+          mkdir -p /tmp/artifact
+          tar -czf /tmp/artifact/django-app.tar.gz --exclude=.git .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::416500109754:role/github-actions-deployer
+          aws-region: ap-south-1
+
+      - name: Upload artifact to S3
+        run: |
+          aws s3 cp /tmp/artifact/django-app.tar.gz s3://yinatra-artifacts-416500109754/deployments/django-app/${GITHUB_SHA}.tar.gz
+          aws s3 cp /tmp/artifact/django-app.tar.gz s3://yinatra-artifacts-416500109754/deployments/django-app/manual.tar.gz
+          echo "Uploaded successfully"
